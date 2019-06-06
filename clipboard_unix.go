@@ -49,6 +49,18 @@ var (
 )
 
 func init() {
+	if isWSL() {
+		pasteCmdArgs = powershellExePasteArgs
+		copyCmdArgs = clipExeCopyArgs
+		trimDos = true
+
+		if _, err := exec.LookPath(clipExe); err == nil {
+			if _, err := exec.LookPath(powershellExe); err == nil {
+				return
+			}
+		}
+	}
+
 	if os.Getenv("WAYLAND_DISPLAY") != "" {
 		pasteCmdArgs = wlpasteArgs
 		copyCmdArgs = wlcopyArgs
@@ -79,16 +91,6 @@ func init() {
 
 	if _, err := exec.LookPath(termuxClipboardSet); err == nil {
 		if _, err := exec.LookPath(termuxClipboardGet); err == nil {
-			return
-		}
-	}
-
-	pasteCmdArgs = powershellExePasteArgs
-	copyCmdArgs = clipExeCopyArgs
-	trimDos = true
-
-	if _, err := exec.LookPath(clipExe); err == nil {
-		if _, err := exec.LookPath(powershellExe); err == nil {
 			return
 		}
 	}
@@ -146,4 +148,15 @@ func writeAll(text string) error {
 		return err
 	}
 	return copyCmd.Wait()
+}
+
+func isWSL() bool {
+	// the official way to detect a WSL distro
+	// ref: https://github.com/microsoft/WSL/issues/423
+	cmd := exec.Command("/bin/sh", "-c", "cat /proc/version | grep -o Microsoft")
+	_, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return true
 }
